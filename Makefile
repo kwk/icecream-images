@@ -89,15 +89,15 @@ run-scheduler:
 		  --netname $(NETNAME)
 
 .PHONY: run-daemon
-run-daemon:
+run-daemon: get-node-name
 	podman run -it --rm \
 		-p 10245:10245/tcp \
 		$(DAEMON_IMAGE_NAME) \
 			--nice 5 \
 			--max-processes $(shell nproc) \
-			-N $(shell hostname) \
+			-N $(node_name) \
 			--netname $(NETNAME) \
-			--scheduler-host $(SCHEDULER_HOST):$(SCHEDULER_HOST_PORT)
+			--scheduler-host $(SCHEDULER_HOST)
 
 # Runs a container with a command line tool to monitor the scheduler
 .PHONY: run-icecream-sundae
@@ -116,3 +116,27 @@ run-icemon:
 		--scheduler $(SCHEDULER_HOST) \
 		--port $(SCHEDULER_HOST_PORT)
 	
+
+#---------------------------------------------------------------------------
+# Helper Targets
+#---------------------------------------------------------------------------
+
+.PHONY: get-hostname
+# Shows the host's name
+get-hostname:
+        $(info Getting hostname...)
+        $(eval hostname=$(shell hostname | awk '{ print toupper($$0) }'))
+        $(info hostname: $(hostname))
+
+.PHONY: get-host-ip
+# Shows the host's IP address
+get-host-ip:
+        $(info Getting host's IP address...)
+        $(eval host_ip=$(shell hostname -I | awk '{print $$2}'))
+        $(info host_ip: $(host_ip))
+
+.PHONY: get-node-name
+get-node-name: get-hostname get-host-ip
+	$(info Getting node name...)
+	$(eval node_name=$(hostname)_$(shell echo $(host_ip) | tr "." "_"))
+	$(info node_name: $(node_name))
