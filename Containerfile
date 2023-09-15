@@ -4,7 +4,7 @@ LABEL maintainer="Konrad Kleine <kkleine@redhat.com>"
 LABEL author="Konrad Kleine <kkleine@redhat.com>"
 ENV LANG=en_US.utf8
 
-RUN dnf install -y \
+RUN dnf install -y --setopt=tsflags=nodocs --setopt=install_weak_deps=False \
     icecream \
     htop \
     iputils \
@@ -36,12 +36,12 @@ LABEL description="An icecream scheduler image based on Fedora that we use in ou
 
 ENTRYPOINT [\
   "icecc-scheduler", \
-  "--port", "8765", \
-  "--user-uid", "icecc", \
-  "-vvv" \
+    "--port", "8765", \
+    "--user-uid", "icecc", \
+    "-vvv" \
 ]
 CMD [\
-  "--netname", "schedulernetname" \
+  "--netname", "UNNAMED_NETNAME" \
 ]
 
 # See https://github.com/icecc/icecream#network-setup-for-icecream-firewalls
@@ -62,25 +62,23 @@ LABEL description="An icecream daemon image based on Fedora that we use in our c
 
 RUN mkdir -pv /home/icecc/{env-basedir,logs}
 
-# Define how to start icecc by default
+# Define how to start iceccd by default
 # (see "man icecc" for more information)
 ENTRYPOINT [\
   "iceccd", \
-  "--user-uid", "icecc", \
-  "--cache-limit", "200", \
-  "--scheduler-host", "10.0.101.32", \
-  "--env-basedir", "/home/icecc/env-basedir", \
-  "--user-uid", "icecc", \
-  "--netname", "daemonnetname", \
-  "-vvv" \
+    "--user-uid", "icecc", \
+    "--env-basedir", "/home/icecc/env-basedir", \
+    "--user-uid", "icecc", \
+    "-vvv" \
 ]
 
-# "--log-file", "/home/icecc/logs/iceccd.log", \
+# Adjust these when calling the 
 
 CMD [\
   "--nice", "5", \
   "--max-processes", "5", \
-  "-N", "kkleineNODE" \
+  "-N", "UNNAMED_NODE", \
+  "--netname", "UNNAMED_NETNAME" \
 ]
 
 # See https://github.com/icecc/icecream#network-setup-for-icecream-firewalls
@@ -88,8 +86,7 @@ CMD [\
 EXPOSE \
   10245/tcp \
   8766/tcp \
-  8765/udp \
-  8766/tcp
+  8765/udp
 
 # VOLUME /home/icecc/envs
 
@@ -97,4 +94,37 @@ EXPOSE \
 HEALTHCHECK --interval=5m --timeout=3s \
    CMD curl -f http://0.0.0.0:10245/ || exit 1
 
-COPY data/etc/sysconfig/icecream /etc/sysconfig/icecream
+# ------------------------------------------------------------------------------
+
+FROM base AS icecream-sundae
+
+LABEL description="An icecream-sundae image based on Fedora that we use in our compile farm"
+
+RUN dnf install -y --setopt=tsflags=nodocs --setopt=install_weak_deps=False \
+    git \
+    gcc-c++ \
+    glib2-devel \
+    icecream-devel \
+    meson \
+    ncurses-devel \
+    ninja-build \
+    && yum clean all
+
+RUN git clone https://github.com/JPEWdev/icecream-sundae.git \
+    && cd icecream-sundae \
+    && mkdir builddir \
+    && cd builddir \
+    && meson .. --buildtype release \
+    && ninja \
+    && ninja install \
+    && cd ../.. \
+    && rm -rf icecream-sundae
+
+ENTRYPOINT [\
+  "/usr/local/bin/icecream-sundae" \
+]
+
+CMD [\
+  "--scheduler", "$(SCHEDULER_HOST)" \
+  "--netname", "$(NETNAME)" \
+]

@@ -2,6 +2,10 @@ FEDORA_RELEASE=$(shell grep -ioP 'FROM fedora:\K[0-9]+' Containerfile)
 REGISTRY=docker.io
 SCHEDULER_IMAGE_NAME=$(REGISTRY)/konradkleine/icecream-scheduler:f$(FEDORA_RELEASE)
 DAEMON_IMAGE_NAME=$(REGISTRY)/konradkleine/icecream-daemon:f$(FEDORA_RELEASE)
+ICECREAM_SUNDAE_IMAGE_NAME=$(REGISTRY)/konradkleine/icecream-sundae:f$(FEDORA_RELEASE)
+SCHEDULER_HOST=10.0.101.32
+SCHEDULER_HOST_PORT=8765
+NETNAME=psi
 
 .PHONY: all
 all:
@@ -12,7 +16,7 @@ all:
 #---------------------------------------------------------------------------
 
 .PHONY: build-images
-build-images: build-scheduler-image build-daemon-image
+build-images: build-scheduler-image build-daemon-image build-icecream-sundae-image
 
 .PHONY: build-scheduler-image
 build-scheduler-image:
@@ -22,12 +26,16 @@ build-scheduler-image:
 build-daemon-image:
 	BUILDAH_FORMAT=docker podman build -t $(DAEMON_IMAGE_NAME) --target daemon .
 
+.PHONY: build-icecream-sundae-image
+build-icecream-sundae-image:
+	BUILDAH_FORMAT=docker podman build -t $(ICECREAM_SUNDAE_IMAGE_NAME) --target icecream-sundae .
+
 #---------------------------------------------------------------------------
 # Pushing images
 #---------------------------------------------------------------------------
 
 .PHONY: push-images
-push-images: push-scheduler-image push-daemon-image
+push-images: push-scheduler-image push-daemon-image push-icecream-sundae-image
 
 .PHONY: push-scheduler-image
 push-scheduler-image:
@@ -36,6 +44,10 @@ push-scheduler-image:
 .PHONY: push-daemon-image
 push-daemon-image:
 	podman push $(DAEMON_IMAGE_NAME)
+
+.PHONY: push-icecream-sundae-image
+push-icecream-sundae-image:
+	podman push $(ICECREAM_SUNDAE_IMAGE_NAME)
 
 #---------------------------------------------------------------------------
 # Pulling images
@@ -52,29 +64,55 @@ pull-scheduler-image:
 pull-daemon-image:
 	podman pull $(DAEMON_IMAGE_NAME)
 
+.PHONY: pull-icecream-sundae-image
+pull-icecream-sundae-image:
+	podman pull $(ICECREAM_SUNDAE_IMAGE_NAME)
+
 #---------------------------------------------------------------------------
 # Running
+#
+# For ports see:
+# https://github.com/icecc/icecream#network-setup-for-icecream-firewalls
 #---------------------------------------------------------------------------
 
 .PHONY: run-scheduler
+# 8765/tcp = scheduler port
+# 8766/tcp = telnet port
+# 8765/udp = broadcast port
+# 
 run-scheduler:
 	podman run -it --rm \
 		-p 8765:8765/tcp \
 		-p 8766:8766/tcp \
 		-p 8765:8765/udp \
-		-p 8766:8766/tcp \
 		$(SCHEDULER_IMAGE_NAME)
+		  --netname $(NETNAME)
 
 .PHONY: run-daemon
 run-daemon:
 	podman run -it --rm \
-		-p 10245:10245/tcp \
-		-p 8766:8766/tcp \
-		-p 8765:8765/udp \
-		-p 8766:8766/tcp \
-		$(DAEMON_IMAGE_NAME)
+		-p 10245:10245/tcp \ 
+		$(DAEMON_IMAGE_NAME) \
+			--nice 5 \
+			--max-processes $(shell nproc) \
+			--node-name $(shell hostname) \
+			--netname $(NETNAME) \
+			--scheduler-host $(SCHEDULER_HOST):$(SCHEDULER_HOST_PORT)
 
+# Runs a container with a command line tool to monitor the scheduler
+.PHONY: run-icecream-sundae
+run-icecream-sundae:
+	podman run -it --rm \
+		$(ICECREAM_SUNDAE_IMAGE_NAME) \
+			--scheduler $(SCHEDULER_HOST) \
+			--netname $(NETNAME) \
+
+# Runs a locally install icecream GUI called (icemon)
 .PHONY: run-icemon
 run-icemon:
-	USE_SCHEDULER=0.0.0.0:8765 icemon
+	USE_SCHEDULER=$(SCHEDULER_HOST):$(SCHEDULER_HOST_PORT) \
+	icemon \
+		--netname $(NETNAME) \
+		--scheduler $(SCHEDULER_HOST) \
+		--port $(SCHEDULER_HOST_PORT)
 	
