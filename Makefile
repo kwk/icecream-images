@@ -132,7 +132,7 @@ get-hostname:
 # Shows the host's IP address
 get-host-ip:
         $(info Getting host's IP address...)
-        $(eval host_ip=$(shell hostname -I | awk '{print $$2}'))
+        $(eval host_ip=$(shell hostname -I | awk '{print $$1}'))
         $(info host_ip: $(host_ip))
 
 .PHONY: get-node-name
