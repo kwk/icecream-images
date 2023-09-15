@@ -1,6 +1,7 @@
 FEDORA_RELEASE=$(shell grep -ioP 'FROM fedora:\K[0-9]+' Containerfile)
-SCHEDULER_IMAGE_NAME=konradkleine/icecream-scheduler:f$(FEDORA_RELEASE)
-DAEMON_IMAGE_NAME=konradkleine/icecream-daemon:f$(FEDORA_RELEASE)
+REGISTRY=docker.io
+SCHEDULER_IMAGE_NAME=$(REGISTRY)/konradkleine/icecream-scheduler:f$(FEDORA_RELEASE)
+DAEMON_IMAGE_NAME=$(REGISTRY)/konradkleine/icecream-daemon:f$(FEDORA_RELEASE)
 
 .PHONY: all
 all:
