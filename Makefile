@@ -91,11 +91,11 @@ run-scheduler:
 .PHONY: run-daemon
 run-daemon:
 	podman run -it --rm \
-		-p 10245:10245/tcp \ 
+		-p 10245:10245/tcp \
 		$(DAEMON_IMAGE_NAME) \
 			--nice 5 \
 			--max-processes $(shell nproc) \
-			--node-name $(shell hostname) \
+			-N $(shell hostname) \
 			--netname $(NETNAME) \
 			--scheduler-host $(SCHEDULER_HOST):$(SCHEDULER_HOST_PORT)
 
