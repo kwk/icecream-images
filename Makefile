@@ -125,7 +125,7 @@ run-icemon:
 # Shows the host's name
 get-hostname:
         $(info Getting hostname...)
-        $(eval hostname=$(shell hostname | awk '{ print toupper($$0) }'))
+        $(eval hostname=$(shell hostname))
         $(info hostname: $(hostname))
 
 .PHONY: get-host-ip
@@ -138,5 +138,5 @@ get-host-ip:
 .PHONY: get-node-name
 get-node-name: get-hostname get-host-ip
 	$(info Getting node name...)
-	$(eval node_name=$(hostname)_$(shell echo $(host_ip) | tr "." "_"))
+	$(eval node_name=$(shell echo $(hostname)_$(host_ip) | tr -c [:alnum:] "_" | awk '{ print toupper($$0) }'))
 	$(info node_name: $(node_name))
