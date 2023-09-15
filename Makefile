@@ -85,7 +85,7 @@ run-scheduler:
 		-p 8765:8765/tcp \
 		-p 8766:8766/tcp \
 		-p 8765:8765/udp \
-		$(SCHEDULER_IMAGE_NAME)
+		$(SCHEDULER_IMAGE_NAME) \
 		  --netname $(NETNAME)
 
 .PHONY: run-daemon
