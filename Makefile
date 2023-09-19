@@ -8,8 +8,8 @@ SCHEDULER_HOST_PORT=8765
 NETNAME=psi
 
 .PHONY: all
-all:
-	$(error Please be more specific!)
+all: stop-scheduler start-scheduler stop-daemon start-daemon
+	-podman logs --names --follow=true icecream-scheduler icecream-daemon
 
 #---------------------------------------------------------------------------
 # Building images
@@ -69,7 +69,7 @@ pull-icecream-sundae-image:
 	podman pull $(ICECREAM_SUNDAE_IMAGE_NAME)
 
 #---------------------------------------------------------------------------
-# Running
+# Scheduler
 #
 # For ports see:
 # https://github.com/icecc/icecream#network-setup-for-icecream-firewalls
@@ -80,20 +80,38 @@ pull-icecream-sundae-image:
 # 8766/tcp = telnet port
 # 8765/udp = broadcast port
 # 
-run-scheduler:
-	-podman rm --force --time 0 icecream-scheduler
+run-scheduler: stop-scheduler start-scheduler
+	-podman logs --names --follow=true icecream-scheduler
+
+.PHONY: start-scheduler
+start-scheduler:
 	podman run -d --name icecream-scheduler \
+		--hostname icecream-scheduler \
 		-p 8765:8765/tcp \
 		-p 8766:8766/tcp \
 		-p 8765:8765/udp \
 		$(SCHEDULER_IMAGE_NAME) \
 		  --netname $(NETNAME)
-	-podman logs --follow=true icecream-scheduler
+
+.PHONY: stop-scheduler
+stop-scheduler:
+	-podman rm --force --time 0 icecream-scheduler
+
+#---------------------------------------------------------------------------
+# Daemon
+#
+# For ports see:
+# https://github.com/icecc/icecream#network-setup-for-icecream-firewalls
+#---------------------------------------------------------------------------
 
 .PHONY: run-daemon
-run-daemon: get-node-name
-	-podman rm --force --time 0 icecream-daemon 
+run-daemon: get-node-name stop-daemon start-daemon
+	-podman logs --names --follow=true icecream-daemon
+
+.PHONY: start-daemon
+start-daemon:
 	podman run -d --name icecream-daemon \
+		--hostname icecream-daemon \
 		-p 10245:10245/tcp \
 		$(DAEMON_IMAGE_NAME) \
 			--nice 5 \
@@ -101,7 +119,17 @@ run-daemon: get-node-name
 			-N $(node_name) \
 			--netname $(NETNAME) \
 			--scheduler-host $(SCHEDULER_HOST)
-	-podman logs --follow=true icecream-daemon
+
+.PHONY: stop-daemon
+stop-daemon:
+	-podman rm --force --time 0 icecream-daemon
+
+#---------------------------------------------------------------------------
+# Monitors
+#
+# For ports see:
+# https://github.com/icecc/icecream#network-setup-for-icecream-firewalls
+#---------------------------------------------------------------------------
 
 # Runs a container with a command line tool to monitor the scheduler
 .PHONY: run-icecream-sundae
