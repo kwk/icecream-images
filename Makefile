@@ -87,7 +87,7 @@ run-scheduler: stop-scheduler start-scheduler
 start-scheduler:
 	podman run -d --name icecream-scheduler \
 		--hostname icecream-scheduler \
-		-p 8765:8765/tcp \
+		-p $(SCHEDULER_HOST_PORT):$(SCHEDULER_HOST_PORT)/tcp \
 		-p 8766:8766/tcp \
 		-p 8765:8765/udp \
 		$(SCHEDULER_IMAGE_NAME) \
@@ -105,11 +105,11 @@ stop-scheduler:
 #---------------------------------------------------------------------------
 
 .PHONY: run-daemon
-run-daemon: get-node-name stop-daemon start-daemon
+run-daemon: stop-daemon start-daemon
 	-podman logs --names --follow=true icecream-daemon
 
 .PHONY: start-daemon
-start-daemon:
+start-daemon: get-node-name
 	podman run -d --name icecream-daemon \
 		--hostname icecream-daemon \
 		-p 10245:10245/tcp \
