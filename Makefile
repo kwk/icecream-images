@@ -81,16 +81,19 @@ pull-icecream-sundae-image:
 # 8765/udp = broadcast port
 # 
 run-scheduler:
-	podman run -it --rm \
+	-podman rm --force --time 0 icecream-scheduler
+	podman run -d --name icecream-scheduler \
 		-p 8765:8765/tcp \
 		-p 8766:8766/tcp \
 		-p 8765:8765/udp \
 		$(SCHEDULER_IMAGE_NAME) \
 		  --netname $(NETNAME)
+	-podman logs --follow=true icecream-scheduler
 
 .PHONY: run-daemon
 run-daemon: get-node-name
-	podman run -it --rm \
+	-podman rm --force --time 0 icecream-daemon 
+	podman run -d --name icecream-daemon \
 		-p 10245:10245/tcp \
 		$(DAEMON_IMAGE_NAME) \
 			--nice 5 \
@@ -98,6 +101,7 @@ run-daemon: get-node-name
 			-N $(node_name) \
 			--netname $(NETNAME) \
 			--scheduler-host $(SCHEDULER_HOST)
+	-podman logs --follow=true icecream-daemon
 
 # Runs a container with a command line tool to monitor the scheduler
 .PHONY: run-icecream-sundae
