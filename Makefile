@@ -7,8 +7,14 @@ SCHEDULER_HOST=10.0.101.32
 SCHEDULER_HOST_PORT=8765
 NETNAME=psi
 
-.PHONY: all
-all: stop-scheduler start-scheduler stop-daemon start-daemon
+.PHONY: start
+start: stop start-scheduler start-daemon logs
+
+.PHONY: stop
+stop: stop-scheduler stop-daemon
+
+.PHONY: logs
+logs:
 	-podman logs --names --follow=true icecream-scheduler icecream-daemon
 
 #---------------------------------------------------------------------------
@@ -156,16 +162,16 @@ run-icemon:
 .PHONY: get-hostname
 # Gets the host's name
 get-hostname:
-        $(info Getting hostname...)
-        $(eval hostname=$(shell hostname))
-        $(info hostname: $(hostname))
+	$(info Getting hostname...)
+	$(eval hostname=$(shell hostname))
+	$(info hostname: $(hostname))
 
 .PHONY: get-host-ip
 # Gets the host's first IP address
 get-host-ip:
-        $(info Getting host's IP address...)
-        $(eval host_ip=$(shell hostname -I | awk '{print $$1}'))
-        $(info host_ip: $(host_ip))
+	$(info Getting host's IP address...)
+	$(eval host_ip=$(shell hostname -I | awk '{print $$1}'))
+	$(info host_ip: $(host_ip))
 
 .PHONY: get-node-name
 get-node-name: get-hostname get-host-ip
